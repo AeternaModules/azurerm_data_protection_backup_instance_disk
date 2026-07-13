@@ -21,40 +21,38 @@ EOT
     vault_id                     = string
     snapshot_subscription_id     = optional(string)
   }))
-  # --- Unconfirmed validation candidates, derived from azurerm_data_protection_backup_instance_disk's provider source ---
-  # Not auto-enabled: either a bespoke provider validator we can't safely translate,
-  # or a path that crosses a list-typed block (needs its own for_each wrapping).
-  # Review, translate into a real validation{} block above, and delete once confirmed.
-  # path: location
-  #   source:    location.EnhancedValidate: no recognizable `if ... { errors = append(...) }` pattern - read it by hand
-  # path: vault_id
-  #   source:    [from backupvaultresources.ValidateBackupVaultID] !ok
-  # path: vault_id
-  #   source:    [from backupvaultresources.ValidateBackupVaultID] err != nil
-  # path: disk_id
-  #   source:    [from commonids.ValidateManagedDiskID] !ok
-  # path: disk_id
-  #   source:    [from commonids.ValidateManagedDiskID] err != nil
-  # path: snapshot_resource_group_name
-  #   condition: length(value) <= 90
-  #   message:   [from resourcegroups.ValidateName: invalid when len(value) > 90]
-  #   source:    [from resourcegroups.ValidateName: invalid when len(value) > 90]
-  # path: snapshot_resource_group_name
-  #   condition: !endswith(value, ".")
-  #   message:   [from resourcegroups.ValidateName: must not end with "."]
-  #   source:    [from resourcegroups.ValidateName: must not end with "."]
-  # path: snapshot_resource_group_name
-  #   condition: length(value) != 0
-  #   message:   [from resourcegroups.ValidateName: invalid when len(value) == 0]
-  #   source:    [from resourcegroups.ValidateName: invalid when len(value) == 0]
-  # path: snapshot_resource_group_name
-  #   source:    [from resourcegroups.ValidateName] !matched
-  # path: backup_policy_id
-  #   source:    [from basebackuppolicyresources.ValidateBackupPolicyID] !ok
-  # path: backup_policy_id
-  #   source:    [from basebackuppolicyresources.ValidateBackupPolicyID] err != nil
-  # path: snapshot_subscription_id
-  #   condition: can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", value))
-  #   message:   must be a valid UUID
+  validation {
+    condition = alltrue([
+      for k, v in var.data_protection_backup_instance_disks : (
+        length(v.snapshot_resource_group_name) <= 90
+      )
+    ])
+    error_message = "[from resourcegroups.ValidateName: invalid when len(value) > 90]"
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.data_protection_backup_instance_disks : (
+        !endswith(v.snapshot_resource_group_name, ".")
+      )
+    ])
+    error_message = "[from resourcegroups.ValidateName: must not end with \".\"]"
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.data_protection_backup_instance_disks : (
+        length(v.snapshot_resource_group_name) != 0
+      )
+    ])
+    error_message = "[from resourcegroups.ValidateName: invalid when len(value) == 0]"
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.data_protection_backup_instance_disks : (
+        v.snapshot_subscription_id == null || (can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", v.snapshot_subscription_id)))
+      )
+    ])
+    error_message = "must be a valid UUID"
+  }
+  # Note: 8 additional provider-side validators are enforced at apply time but not mirrored as validation{} blocks here (bespoke or non-mechanically-translatable).
 }
 
