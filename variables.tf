@@ -21,14 +21,6 @@ EOT
     vault_id                     = string
     snapshot_subscription_id     = optional(string)
   }))
-  validation {
-    condition = alltrue([
-      for k, v in var.data_protection_backup_instance_disks : (
-        v.snapshot_subscription_id == null || (can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", v.snapshot_subscription_id)))
-      )
-    ])
-    error_message = "must be a valid UUID"
-  }
   # --- Unconfirmed validation candidates, derived from azurerm_data_protection_backup_instance_disk's provider source ---
   # Not auto-enabled: either a bespoke provider validator we can't safely translate,
   # or a path that crosses a list-typed block (needs its own for_each wrapping).
@@ -61,5 +53,8 @@ EOT
   #   source:    [from basebackuppolicyresources.ValidateBackupPolicyID] !ok
   # path: backup_policy_id
   #   source:    [from basebackuppolicyresources.ValidateBackupPolicyID] err != nil
+  # path: snapshot_subscription_id
+  #   condition: can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", value))
+  #   message:   must be a valid UUID
 }
 
